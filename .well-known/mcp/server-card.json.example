@@ -1,0 +1,28 @@
+{
+  "$schema": "https://modelcontextprotocol.io/schemas/server-card.json",
+  "name": "{{PROJECT_NAME_KEBAB}}",
+  "displayName": "{{PROJECT_NAME}}",
+  "description": "{{ONE_LINER}}",
+  "version": "0.1.0",
+  "vendor": {
+    "name": "{{OWNER}}",
+    "url": "https://github.com/Zestraxz/{{PROJECT_NAME_KEBAB}}"
+  },
+  "license": "MIT",
+  "transport": {
+    "type": "streamable-http",
+    "endpoint": "/mcp"
+  },
+  "auth": {
+    "scheme": "oauth2",
+    "tokenEndpoint": "/oauth/token",
+    "scopes": ["read", "write"]
+  },
+  "capabilities": {
+    "tools": true,
+    "resources": true,
+    "prompts": false,
+    "sampling": false
+  },
+  "_note": "Per MCP SEP-1649: place at .well-known/mcp/server-card.json on the host that serves the MCP endpoint. Update the values, remove the .example suffix."
+}

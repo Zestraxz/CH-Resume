@@ -1,0 +1,8 @@
+# The Critic kit ships into repos that may have no line-ending policy of their own.
+# install.sh is executed by bash — a CRLF checkout makes every line end in \r and
+# the script dies with "$'\r': command not found". Scoping the rule to this folder
+# protects the kit without imposing a normalization policy on the host repo.
+*.sh   text eol=lf
+*.yml  text eol=lf
+*.md   text eol=lf
+*.ps1  text eol=crlf

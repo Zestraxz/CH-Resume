@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json.schemastore.org/mcp-servers.json",
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem@2026.7.10", "${workspaceFolder}"]
+    },
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "_note": "Official remote GitHub MCP server (OAuth; no PAT stored). Replaces the deprecated @modelcontextprotocol/server-github package."
+    }
+  }
+}

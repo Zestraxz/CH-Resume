@@ -1,0 +1,23 @@
+# Single-app source root.
+#
+# Use this layout INSTEAD OF apps/ + packages/ when:
+#   - You have one deployable artifact
+#   - You don't need to share types between processes
+#   - You want minimum ceremony
+#
+# Suggested subfolders:
+#
+#   src/
+#   ├── components/     — reusable UI (frontend)
+#   ├── pages/          — route-scoped containers (frontend)
+#   ├── routes/         — HTTP routes (backend)
+#   ├── services/       — business logic
+#   ├── repositories/   — data access
+#   ├── schemas/        — Zod / Pydantic schemas
+#   ├── state/          — state machines, enums
+#   ├── lib/            — utilities, API client
+#   ├── types/          — type definitions
+#   └── config/         — env-driven config
+#
+# Delete this .gitkeep when the folder has real content.
+# If you switch to monorepo later, move src/ contents into apps/<app>/src/.

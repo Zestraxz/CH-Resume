@@ -1,0 +1,71 @@
+site_name: 'Resume'
+site_description: 'TODO: one-line description of Resume'
+site_author: 'Chan Hoe'
+repo_url: 'https://github.com/Zestraxz/resume'
+edit_uri: 'edit/main/docs/'
+
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.highlight
+    - search.suggest
+    - content.code.copy
+    - content.action.edit
+  palette:
+    - scheme: default
+      primary: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  icon:
+    repo: fontawesome/brands/github
+
+plugins:
+  - search
+  - mermaid2
+
+markdown_extensions:
+  - admonition
+  - codehilite
+  - footnotes
+  - meta
+  - pymdownx.details
+  - pymdownx.tabbed
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:mermaid2.fence_mermaid_custom
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Start Here:
+      - Overview: 00-start-here/README.md
+      - Quickstart: 00-start-here/QUICKSTART.md
+      - Install: 00-start-here/INSTALL.md
+  - Governance:
+      - Contributing: 02-governance/CONTRIBUTING.md
+      - Governance: 02-governance/GOVERNANCE.md
+      - Taxonomy: 02-governance/TAXONOMY.md
+      - Security: 02-governance/SECURITY.md
+      - Privacy: 02-governance/PRIVACY.md
+  - Deployment:
+      - Runbook: 03-deployment/RUNBOOK.md
+      - Deployment: 03-deployment/DEPLOYMENT.md
+  - Quality:
+      - ADRs: 04-quality/adr/
+      - Review template: 04-quality/REVIEW_TEMPLATE.md
+  - Architecture:
+      - C4 + arc42: architecture/
+  - Workflows: 05-workflows/

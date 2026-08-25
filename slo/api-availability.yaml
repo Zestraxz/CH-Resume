@@ -1,0 +1,57 @@
+apiVersion: openslo/v1
+kind: SLO
+metadata:
+  name: api-availability
+  displayName: API Availability
+spec:
+  description: Fraction of HTTP requests to /api/v1/* that succeed (2xx or 3xx) per 30d.
+  service: 'resume-api'
+  indicator:
+    metadata:
+      name: http-success-ratio
+    spec:
+      ratioMetric:
+        counter: true
+        good:
+          metricSource:
+            type: prometheus
+            spec:
+              query: 'sum(rate(http_requests_total{job="api",status=~"2..|3.."}[5m]))'
+        total:
+          metricSource:
+            type: prometheus
+            spec:
+              query: 'sum(rate(http_requests_total{job="api"}[5m]))'
+  objectives:
+    - displayName: '99.5% over 30d'
+      target: 0.995
+  timeWindow:
+    - duration: 30d
+      isRolling: true
+
+---
+apiVersion: openslo/v1
+kind: SLO
+metadata:
+  name: api-latency-p95
+  displayName: API p95 latency under 200ms
+spec:
+  description: 95th percentile of API request duration.
+  service: 'resume-api'
+  indicator:
+    metadata:
+      name: http-latency-p95
+    spec:
+      thresholdMetric:
+        metricSource:
+          type: prometheus
+          spec:
+            query: 'histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job="api"}[5m])) by (le))'
+  objectives:
+    - displayName: 'p95 < 200ms over 30d'
+      target: 0.99
+      op: lte
+      value: 0.2
+  timeWindow:
+    - duration: 30d
+      isRolling: true

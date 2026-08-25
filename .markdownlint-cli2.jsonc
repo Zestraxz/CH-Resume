@@ -1,0 +1,29 @@
+{
+  // markdownlint-cli2 config - https://github.com/DavidAnson/markdownlint-cli2
+  // Apply with: npx markdownlint-cli2 "**/*.md"
+  "config": {
+    "default": true,
+    // Allow inline HTML (Mermaid blocks, badges, etc.)
+    "MD033": false,
+    // Allow long lines (URLs, tables, code blocks)
+    "MD013": false,
+    // First line doesn't have to be a top-level heading (README sometimes has badges first)
+    "MD041": false,
+    // Don't enforce duplicate-headings-in-same-doc rule on README sections
+    "MD024": { "siblings_only": true },
+    // ATX-style headings only (# vs setext ===)
+    "MD003": { "style": "atx" },
+    // No-trailing-punctuation in headings; allow ?
+    "MD026": { "punctuation": ".,;:!" }
+  },
+  "globs": [
+    "**/*.md",
+    "!node_modules/**",
+    "!05_archive/**",
+    "!03_history/**",
+    "!dist/**",
+    "!build/**",
+    "!coverage/**",
+    "!.next/**"
+  ]
+}

@@ -1,0 +1,128 @@
+# Kubernetes deployment template
+# Copy to kubernetes-deployment.yaml at project root.
+# Apply: kubectl apply -f kubernetes-deployment.yaml
+# Or via Helm / Kustomize / ArgoCD - this is a starting point only.
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{PROJECT_NAME_KEBAB}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{PROJECT_NAME_KEBAB}}-api
+  namespace: {{PROJECT_NAME_KEBAB}}
+  labels:
+    app: {{PROJECT_NAME_KEBAB}}
+    component: api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: {{PROJECT_NAME_KEBAB}}
+      component: api
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: {{PROJECT_NAME_KEBAB}}
+        component: api
+    spec:
+      containers:
+        - name: api
+          image: ghcr.io/zestraxz/{{PROJECT_NAME_KEBAB}}/api:latest  # pin to digest in prod
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+              name: http
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{PROJECT_NAME_KEBAB}}-secrets
+                  key: database-url
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{PROJECT_NAME_KEBAB}}-secrets
+                  key: jwt-secret
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{PROJECT_NAME_KEBAB}}-api
+  namespace: {{PROJECT_NAME_KEBAB}}
+spec:
+  type: ClusterIP
+  selector:
+    app: {{PROJECT_NAME_KEBAB}}
+    component: api
+  ports:
+    - port: 80
+      targetPort: 8000
+      protocol: TCP
+      name: http
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{PROJECT_NAME_KEBAB}}-ingress
+  namespace: {{PROJECT_NAME_KEBAB}}
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts: [api.{{PROJECT_NAME_KEBAB}}.example.com]
+      secretName: {{PROJECT_NAME_KEBAB}}-tls
+  rules:
+    - host: api.{{PROJECT_NAME_KEBAB}}.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{PROJECT_NAME_KEBAB}}-api
+                port:
+                  number: 80
+---
+# Secrets - create via: kubectl create secret generic {{PROJECT_NAME_KEBAB}}-secrets \
+#   --from-literal=database-url='postgresql://...' \
+#   --from-literal=jwt-secret='...' \
+#   -n {{PROJECT_NAME_KEBAB}}

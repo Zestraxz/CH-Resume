@@ -1,0 +1,32 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# =============================================================================
+# Pre-commit gate — runs before every commit.
+# Bypass (NOT RECOMMENDED): git commit --no-verify
+# =============================================================================
+
+set -e
+
+echo "==> Pre-commit: format check + lint + typecheck"
+
+# Format (Node)
+if [ -f package.json ]; then
+    pnpm format:check || {
+        echo "FAIL: prettier check failed. Run 'pnpm format' to fix."
+        exit 1
+    }
+    pnpm lint || exit 1
+    pnpm typecheck || exit 1
+fi
+
+# Format (Python)
+if [ -f pyproject.toml ]; then
+    ruff format --check . || {
+        echo "FAIL: ruff format check failed. Run 'ruff format .' to fix."
+        exit 1
+    }
+    ruff check . || exit 1
+fi
+
+echo "OK: pre-commit gate passed"

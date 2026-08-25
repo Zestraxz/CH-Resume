@@ -1,0 +1,2 @@
+# End-to-end tests — full stack via HTTP / browser. Slowest. Few of these.
+# Tools: Playwright (web), supertest (API), pytest + httpx (Py).

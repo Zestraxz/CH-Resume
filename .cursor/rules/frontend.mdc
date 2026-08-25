@@ -1,0 +1,46 @@
+---
+description: Frontend-specific rules (React + TypeScript). Auto-attached to frontend files.
+globs:
+  - "apps/web/**/*.{ts,tsx,jsx}"
+  - "src/components/**/*"
+  - "src/pages/**/*"
+---
+
+# Frontend Rules
+
+Extends [`always.mdc`](mdc:.cursor/rules/always.mdc). Adds frontend-specific guidance.
+
+## React conventions
+
+- Function components only. No class components.
+- Components in `PascalCase.tsx`. One component per file (unless trivial sub-components).
+- Hooks in `useFoo.ts` (camelCase, `use` prefix).
+- State via Zustand store per domain (or Pinia for Vue). One file per store.
+- Data fetching ONLY via `src/lib/api.ts` wrapper - never bare `fetch` in components.
+
+## Styling
+
+- Tailwind classes first. Custom CSS only when Tailwind can't express it.
+- No inline `style={{...}}` except for dynamic values.
+- Design tokens in `tailwind.config.js` - don't hardcode hex colors in JSX.
+
+## Accessibility
+
+- Every interactive element has a discernible name (text content, `aria-label`, or `aria-labelledby`).
+- Color is not the only signal (use icon + text together).
+- Forms use `<label htmlFor>` paired with inputs.
+- Modals trap focus and restore it on close.
+
+## Performance budgets
+
+- LCP < 2.5s
+- INP < 200ms
+- CLS < 0.1
+- JS bundle < 200KB gzipped (enforced by `size-limit` in CI)
+
+## Don't
+
+- Don't `useEffect` for derived state (use computed values).
+- Don't fetch in `useEffect` without an abort signal.
+- Don't `key={index}` in dynamic lists.
+- Don't import from `apps/api/*` (cross-app boundary).

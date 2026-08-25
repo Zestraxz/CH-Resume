@@ -1,0 +1,47 @@
+---
+description: Backend-specific rules (Node.js / Python APIs). Agent-requested via @backend.
+---
+
+# Backend Rules
+
+Extends [`always.mdc`](mdc:.cursor/rules/always.mdc). Adds backend-specific guidance.
+
+## API conventions
+
+- All routes under `/api/v1/*`. Major version bumps require ADR.
+- Zod (TS) / Pydantic (Py) at every route boundary - request AND response.
+- Errors are typed `AppError` subclasses with HTTP status mapped at the boundary.
+- No bare `throw new Error()`. No catching and silently swallowing.
+
+## Data access
+
+- ORM only (Prisma / SQLAlchemy). No raw SQL except for migrations and rare read-only analytics.
+- All queries parameterized. Never string-concat user input into SQL.
+- N+1 queries are bugs - use eager loading / `select_related` / `include`.
+
+## Async
+
+- Async I/O everywhere (no sync DB calls in async handlers).
+- All external calls have timeouts (default 5s).
+- Long-running work goes to a queue (BullMQ / Celery), not inline in HTTP handler.
+
+## Logging
+
+- Structured JSON via pino (Node) / structlog (Python).
+- Correlation ID per request, propagated to all downstream calls.
+- Log levels: `debug` (verbose), `info` (notable events), `warn` (recoverable), `error` (failed).
+- Never log secrets, tokens, or full request bodies that may contain PII.
+
+## Auth
+
+- JWT short-lived (<= 15 min) + refresh token (httpOnly, secure, sameSite=lax).
+- Refresh rotation: each refresh issues a new refresh token; old one invalid.
+- Authz checked on EVERY endpoint, not just login. Use middleware/decorator pattern.
+- Deny by default; allow by explicit role.
+
+## Don't
+
+- Don't trust client-supplied IDs - re-lookup server-side and check authz.
+- Don't return internal error details in 5xx responses (security leak).
+- Don't make HTTP calls without timeout + retry policy.
+- Don't import from `apps/web/*` (cross-app boundary).

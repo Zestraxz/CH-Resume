@@ -1,0 +1,93 @@
+# =============================================================================
+# {{PROJECT_NAME}} — .dockerignore
+# =============================================================================
+# Anything matched here is NOT sent in the Docker build context.
+# Keep tight to speed up builds.
+
+# ---- Version control --------------------------------------------------------
+.git/
+.gitignore
+.gitattributes
+
+# ---- IDE / editor -----------------------------------------------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---- Node / pnpm ------------------------------------------------------------
+node_modules/
+.pnpm-store/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+.yarn/
+
+# ---- Python -----------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ---- Build / cache ----------------------------------------------------------
+dist/
+build/
+out/
+.next/
+.nuxt/
+.cache/
+.turbo/
+.svelte-kit/
+storybook-static/
+coverage/
+.nyc_output/
+
+# ---- Env / secrets ----------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+
+# ---- Project conventions ----------------------------------------------------
+01_setup/
+02_active/
+03_history/
+04_tools/
+05_archive/
+docs/
+scripts/
+tests/
+.github/
+.claude/
+agents/
+skills/
+commands/
+hooks/
+mcp-configs/
+rules/
+
+# ---- Docs / readmes (keep README.md for some images; remove if not needed) --
+*.md
+!apps/api/README.md
+!apps/web/README.md
+
+# ---- Misc -------------------------------------------------------------------
+*.log
+*.bak
+*.bak.*
+*.backup
+LICENSE
+CHANGELOG.md
+CODEOWNERS
+PROJECT_STRUCTURE.md
+START_HERE.*
+OPEN_ARTIFACTS.*

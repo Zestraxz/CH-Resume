@@ -1,0 +1,58 @@
+# Multi-window, multi-burn-rate alerts (Google SRE canonical pattern).
+# Two windows + two burn rates = catches both fast burn (page) and slow burn (ticket).
+
+groups:
+  - name: slo-burn-rates
+    rules:
+      # Fast burn (page within 1h if burning at 14.4x = 100% budget in 2 days)
+      - alert: APIAvailabilityFastBurn
+        expr: |
+          (
+            (1 - (
+              sum(rate(http_requests_total{job="api",status=~"2..|3.."}[1h]))
+              /
+              sum(rate(http_requests_total{job="api"}[1h]))
+            )) > (14.4 * 0.005)
+          )
+          and
+          (
+            (1 - (
+              sum(rate(http_requests_total{job="api",status=~"2..|3.."}[5m]))
+              /
+              sum(rate(http_requests_total{job="api"}[5m]))
+            )) > (14.4 * 0.005)
+          )
+        for: 2m
+        labels:
+          severity: page
+          slo: api-availability
+        annotations:
+          summary: 'API SLO burning fast (>14.4x)'
+          description: '{{ $value | humanizePercentage }} error rate vs 0.5% SLO'
+          runbook: 'https://github.com/Zestraxz/resume/blob/main/docs/03-deployment/RUNBOOK.md#api-down'
+
+      # Slow burn (ticket within 6h if burning at 6x = 100% budget in 5 days)
+      - alert: APIAvailabilitySlowBurn
+        expr: |
+          (
+            (1 - (
+              sum(rate(http_requests_total{job="api",status=~"2..|3.."}[6h]))
+              /
+              sum(rate(http_requests_total{job="api"}[6h]))
+            )) > (6 * 0.005)
+          )
+          and
+          (
+            (1 - (
+              sum(rate(http_requests_total{job="api",status=~"2..|3.."}[30m]))
+              /
+              sum(rate(http_requests_total{job="api"}[30m]))
+            )) > (6 * 0.005)
+          )
+        for: 15m
+        labels:
+          severity: ticket
+          slo: api-availability
+        annotations:
+          summary: 'API SLO burning slow (>6x)'
+          description: '{{ $value | humanizePercentage }} error rate vs 0.5% SLO'

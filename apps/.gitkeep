@@ -1,0 +1,14 @@
+# Place runnable applications here (one folder per app):
+#
+#   apps/
+#   ├── api/      — backend service
+#   ├── web/      — frontend SPA
+#   └── worker/   — async job processor
+#
+# Each app:
+#   - has its own package.json (npm name: @resume/<app>)
+#   - extends ../../tsconfig.base.json
+#   - has its own Dockerfile (multistage; targets dev, prod)
+#   - is in the pnpm workspace via pnpm-workspace.yaml
+#
+# Delete this .gitkeep when the folder has real content.

@@ -1,0 +1,30 @@
+# CODEOWNERS for Resume
+# Documentation: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Global fallback — anything not matched below
+* @Zestraxz
+
+# Documentation & governance — review carefully
+/docs/                              @Zestraxz
+/docs/02-governance/                @Zestraxz
+/docs/04-quality/adr/               @Zestraxz
+
+# AI assistant configuration — high blast radius
+/CLAUDE.md                          @Zestraxz
+/AGENTS.md                          @Zestraxz
+/.github/copilot-instructions.md    @Zestraxz
+/.claude/                           @Zestraxz
+/rules/                             @Zestraxz
+
+# Infrastructure & ops — production-validated
+/04_tools/                          @Zestraxz
+/scripts/                           @Zestraxz
+/docker-compose*.yml                @Zestraxz
+/.github/workflows/                 @Zestraxz
+
+# Domain truth — schema/state changes require review
+/packages/shared/                   @Zestraxz
+
+# Locked
+/05_archive/                        @Zestraxz
+/03_history/                        @Zestraxz

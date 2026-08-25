@@ -1,0 +1,32 @@
+# Backstage entity descriptor - https://backstage.io/docs/features/software-catalog/descriptor-format/
+# Optional - only meaningful if your org runs Backstage. Harmless if not.
+
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: resume
+  title: 'Resume'
+  description: 'TODO: one-line description of Resume'
+  annotations:
+    github.com/project-slug: 'Zestraxz/resume'
+    backstage.io/techdocs-ref: 'dir:.'
+    backstage.io/source-location: 'url:https://github.com/Zestraxz/resume'
+  links:
+    - title: 'AGENTS.md (AI brief)'
+      url: 'https://github.com/Zestraxz/resume/blob/main/AGENTS.md'
+    - title: 'STATUS.md'
+      url: 'https://github.com/Zestraxz/resume/blob/main/STATUS.md'
+    - title: 'Runbook'
+      url: 'https://github.com/Zestraxz/resume/blob/main/docs/03-deployment/RUNBOOK.md'
+  tags:
+    - 'typescript'
+    - 'python'
+    - 'docker'
+spec:
+  type: service
+  lifecycle: experimental
+  owner: 'Chan Hoe'
+  system: resume
+  dependsOn:
+    - 'resource:postgres'
+    - 'resource:redis'

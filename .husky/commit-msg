@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# =============================================================================
+# Commit message gate — enforces Conventional Commits via commitlint.
+# =============================================================================
+
+npx --no-install commitlint --edit "$1"

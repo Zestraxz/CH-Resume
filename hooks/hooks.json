@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-hooks.json",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File hooks/scan-bash.ps1",
+            "timeout": 10,
+            "description": "Block dangerous bash patterns (rm -rf /, curl|sh, mkfs, etc.)"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '[hook] file modified - run pnpm format / ruff format before commit'",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "Stop": [],
+    "SessionStart": [],
+    "SessionEnd": [],
+    "PreCompact": []
+  }
+}

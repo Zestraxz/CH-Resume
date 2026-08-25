@@ -1,0 +1,8 @@
+{
+  "name": "Resume",
+  "description": "TODO: one-line description of Resume",
+  "version": "0.1.0",
+  "framework": "vite-react",
+  "layout": "flat",
+  "_note": "AI Studio compatibility metadata. Lists the project's high-level shape so AI assistants and tooling can recognize it as a flat-Vite layout (App.tsx + components/ + hooks/ + utils/ at root). Edit fields as your app evolves; this file is not consumed at build time."
+}

@@ -1,0 +1,10 @@
+# Aider config - see https://aider.chat/docs/config.html
+# The canonical AI-assistant brief is in AGENTS.md (read by Aider natively).
+
+model: claude-sonnet-4.6
+auto-commits: false
+gitignore: true
+read:
+  - AGENTS.md
+test-cmd: pnpm test
+lint-cmd: pnpm lint

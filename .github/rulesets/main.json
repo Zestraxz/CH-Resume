@@ -1,0 +1,31 @@
+{
+  "name": "Protect main",
+  "target": "branch",
+  "enforcement": "active",
+  "conditions": {
+    "ref_name": {
+      "include": ["refs/heads/main"],
+      "exclude": []
+    }
+  },
+  "rules": [
+    { "type": "deletion" },
+    { "type": "non_fast_forward" },
+    {
+      "type": "pull_request",
+      "parameters": {
+        "required_approving_review_count": 1,
+        "dismiss_stale_reviews_on_push": true,
+        "require_code_owner_review": true,
+        "require_last_push_approval": true,
+        "required_review_thread_resolution": true
+      }
+    },
+    { "type": "required_signatures" }
+  ],
+  "bypass_actors": [
+    { "actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "always" }
+  ],
+  "_note_commit_message_pattern": "Removed 2026-05-25: commit_message_pattern is Organization-tier only (not available for individual / free public repos). Enforce Conventional Commits via commitlint + Husky locally and a commitlint GitHub Action in CI. If you have a GitHub Enterprise org, add the rule back at the org-ruleset level.",
+  "_note_required_status_checks": "Add the required_status_checks rule only AFTER your first CI run has landed on main and you know the exact context names. Trying to require a context that doesn't exist yet blocks all merges. Example shape: { \"type\": \"required_status_checks\", \"parameters\": { \"strict_required_status_checks_policy\": true, \"required_status_checks\": [ { \"context\": \"node\" } ] } }"
+}

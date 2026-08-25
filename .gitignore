@@ -1,0 +1,112 @@
+# =============================================================================
+# Resume — .gitignore
+# =============================================================================
+
+# ---- Secrets ----------------------------------------------------------------
+.env
+.env.*
+!.env.example
+!.env.production.example
+*.pem
+*.key
+*.p12
+credentials.json
+secrets/
+
+# ---- Node / pnpm ------------------------------------------------------------
+node_modules/
+.pnp.*
+.yarn/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
+
+# ---- Python -----------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+.venv/
+venv/
+env/
+.tox/
+.nox/
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+dist/
+build/
+
+# ---- Build outputs ----------------------------------------------------------
+dist/
+build/
+out/
+.next/
+.nuxt/
+.cache/
+.parcel-cache/
+.turbo/
+.svelte-kit/
+storybook-static/
+
+# ---- Test / coverage --------------------------------------------------------
+coverage/
+.nyc_output/
+*.lcov
+playwright-report/
+test-results/
+
+# ---- IDE / editor -----------------------------------------------------------
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json.example
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---- OS ---------------------------------------------------------------------
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+Thumbs.db
+ehthumbs.db
+
+# ---- Logs -------------------------------------------------------------------
+*.log
+logs/
+
+# ---- Docker / data ----------------------------------------------------------
+.docker/data/
+postgres-data/
+redis-data/
+volumes/
+
+# ---- Backups ----------------------------------------------------------------
+*.bak
+*.bak.*
+*.backup
+
+# ---- Claude Code session local artifacts ------------------------------------
+.claude/local/
+.claude/sessions/
+.claude/cache/
+
+# ---- Project-specific (uncomment as needed) ---------------------------------
+# evidence-store/
+# uploads/
+# artifacts/
+
+# ---- Critic per-pass scratch logs -------------------------------------------
+_runs/

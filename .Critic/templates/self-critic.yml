@@ -1,0 +1,360 @@
+# Critic Radar — scheduled autonomous self-critique.
+#
+# Runs the Mode-A discovery sweep on a cron with ZERO prior context, then opens a PR.
+# Procedure: .Critic/radar-prompt.md  ·  Rules: .Critic/Critic-Radar.md
+# SOP + monitoring: docs/04-quality/critic/SOP-AUTONOMOUS-SELF-CRITIC.md, MONITORING.md
+#
+# AUTH — subscription, not API credits (ledger law L-APIKEY):
+#   claude setup-token          # requires a Claude subscription; prints a long-lived token
+#   Add the output as repo secret CLAUDE_CODE_OAUTH_TOKEN
+# Until that secret exists this workflow SKIPS cleanly instead of failing red every week.
+#
+# ⚠ GitHub disables scheduled workflows after ~60 days of repo inactivity. For a repo whose only
+#   regular activity is this job, that is a real deadlock — see SOP §4.
+
+name: Critic Radar
+
+on:
+  schedule:
+    # Weekly: Mondays 05:07 UTC = 13:07 UTC+8.
+    # Deliberately OFF the hour. GitHub's own guidance is that top-of-hour schedules are the most
+    # contended and may be delayed or dropped entirely — and a dropped cron leaves no run row at
+    # all, which is the least detectable failure in this system.
+    - cron: '7 5 * * 1'
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Why this manual run (recorded in the PR body)'
+        required: false
+        default: 'Manual verification run'
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: critic-radar
+  cancel-in-progress: false
+
+env:
+  # Opus 5 at 'high' effort. Dropped from 'max' 2026-08-08: two max-effort sweeps cost
+  # ~4.8M tokens each. 'high' is the cost lever with the least capability loss for a
+  # bounded discovery sweep. The session default elsewhere remains higher.
+  CRITIC_MODEL: claude-opus-5
+  CRITIC_EFFORT: high
+
+jobs:
+  # `secrets` is NOT available in a job-level `if:`, so gate on a preflight output instead.
+  preflight:
+    runs-on: ubuntu-latest
+    outputs:
+      configured: ${{ steps.check.outputs.configured }}
+    steps:
+      - id: check
+        env:
+          TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          if [ -n "$TOKEN" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+            echo "Auth configured — Radar will run." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            {
+              echo "### Critic Radar skipped — not yet activated"
+              echo
+              echo 'This run did **nothing** because no auth secret is set.'
+              echo
+              echo '```bash'
+              echo 'claude setup-token   # requires a Claude subscription (not an API key)'
+              echo '```'
+              echo
+              echo 'Add the output as repo secret `CLAUDE_CODE_OAUTH_TOKEN`:'
+              echo 'Settings → Secrets and variables → Actions → New repository secret.'
+              echo
+              echo 'See `docs/04-quality/critic/SOP-AUTONOMOUS-SELF-CRITIC.md` §2a.'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  radar:
+    needs: preflight
+    if: needs.preflight.outputs.configured == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Prepare run
+        id: prep
+        run: |
+          set -euo pipefail
+          DATE="$(date -u +%Y-%m-%d)"
+          echo "date=$DATE" >> "$GITHUB_OUTPUT"
+          echo "branch=self-critic/$DATE" >> "$GITHUB_OUTPUT"
+          git config user.name  "critic-radar[bot]"
+          git config user.email "critic-radar@users.noreply.github.com"
+          git checkout -b "self-critic/$DATE"
+
+      # CI has no interactive trust dialog, so Claude Code ignores this repo's .claude/settings.json
+      # permissions ("Ignoring 26 permissions.allow entries: this workspace has not been trusted").
+      # Marking the checkout trusted restores them. --allowed-tools still bounds what the run may do.
+      - name: Trust the workspace
+        run: |
+          set -euo pipefail
+          CFG="$HOME/.claude.json"
+          [ -f "$CFG" ] || echo '{}' > "$CFG"
+          jq --arg p "$PWD" '.projects[$p].hasTrustDialogAccepted = true' "$CFG" > "$CFG.tmp"
+          mv "$CFG.tmp" "$CFG"
+          echo "Trusted: $PWD"
+
+      # Isolates auth and flag problems from Radar complexity. Costs a handful of tokens and turns
+      # "exit 1, no output" into a named cause. Runs bare first, then with the pinned model/effort,
+      # so a rejected --model or --effort is distinguishable from a rejected token.
+      - name: Preflight — verify Claude Code auth and flags
+        env:
+          RAW_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          set -uo pipefail
+          # A secret pasted from wrapped terminal output carries embedded newlines, and an HTTP
+          # header cannot contain them — the CLI reports "Header '14' has invalid value". The token
+          # has no internal whitespace, so stripping all whitespace restores the intended value.
+          CLEAN="$(printf '%s' "$RAW_TOKEN" | tr -d '[:space:]')"
+          echo "::add-mask::$CLEAN"
+          export CLAUDE_CODE_OAUTH_TOKEN="$CLEAN"
+          if [ "${#CLEAN}" -ne "${#RAW_TOKEN}" ]; then
+            echo "::warning::Stripped $(( ${#RAW_TOKEN} - ${#CLEAN} )) whitespace character(s) from the token secret — it was pasted from wrapped terminal output. The run continues with the cleaned value; re-save the secret without line breaks to silence this."
+          fi
+
+          echo "::group::claude --version"
+          claude --version || echo "version check failed"
+          echo "::endgroup::"
+
+          echo "::group::smoke 1 — bare auth (no model/effort flags)"
+          set +e
+          OUT1=$(claude -p "Reply with exactly: OK" --output-format json 2>&1); C1=$?
+          set -e
+          echo "$OUT1" | head -c 2000; echo; echo "exit=$C1"
+          echo "::endgroup::"
+
+          echo "::group::smoke 2 — with --model $CRITIC_MODEL --effort $CRITIC_EFFORT"
+          set +e
+          OUT2=$(claude -p "Reply with exactly: OK" --model "$CRITIC_MODEL" \
+                   --effort "$CRITIC_EFFORT" --output-format json 2>&1); C2=$?
+          set -e
+          echo "$OUT2" | head -c 2000; echo; echo "exit=$C2"
+          echo "::endgroup::"
+
+          if [ $C1 -ne 0 ]; then
+            echo "::error::Bare auth failed (exit $C1). The CLAUDE_CODE_OAUTH_TOKEN secret is set but rejected — regenerate it with 'claude setup-token' and update the secret."
+            exit 1
+          fi
+          if [ $C2 -ne 0 ]; then
+            echo "::error::Auth works, but --model $CRITIC_MODEL / --effort $CRITIC_EFFORT was rejected (exit $C2). Adjust the CRITIC_MODEL / CRITIC_EFFORT env values above."
+            exit 1
+          fi
+          echo "Auth and flags OK."
+
+      - name: Run the Critic Radar
+        id: radar
+        env:
+          RAW_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          set -uo pipefail
+          # Same whitespace strip as the preflight step — see the comment there.
+          CLEAN="$(printf '%s' "$RAW_TOKEN" | tr -d '[:space:]')"
+          echo "::add-mask::$CLEAN"
+          export CLAUDE_CODE_OAUTH_TOKEN="$CLEAN"
+
+          # The prompt is project-agnostic and reads the binding at runtime — never inline it here.
+          # JSON output so the run's token/cost telemetry can be reported; the report text is in .result
+          # stderr is TEE'd to the log, never swallowed: redirecting both streams to files previously
+          # made a failure show up as an empty summary with no diagnosable cause.
+          set +e
+          claude -p "$(cat .Critic/radar-prompt.md)" \
+            --model "$CRITIC_MODEL" \
+            --effort "$CRITIC_EFFORT" \
+            --permission-mode acceptEdits \
+            --allowed-tools "Read Edit Write Grep Glob WebSearch WebFetch Task Agent Bash(git:*)" \
+            --output-format json \
+            > radar-result.json 2> >(tee radar-stderr.txt >&2)
+          CODE=$?
+          set -e
+          echo "exit_code=$CODE" >> "$GITHUB_OUTPUT"
+
+          echo "::group::raw result envelope (first 3000 chars)"
+          head -c 3000 radar-result.json || echo "(radar-result.json unreadable)"
+          echo
+          echo "::endgroup::"
+
+          # Defensive parsing: never let a missing/renamed field fail the run and lose the report.
+          jqv() { jq -r "$1 // empty" radar-result.json 2>/dev/null || true; }
+
+          IN=$(jqv '.usage.input_tokens'); OUT=$(jqv '.usage.output_tokens')
+          CR=$(jqv '.usage.cache_read_input_tokens'); CC=$(jqv '.usage.cache_creation_input_tokens')
+          COST=$(jqv '.total_cost_usd'); TURNS=$(jqv '.num_turns'); MS=$(jqv '.duration_ms')
+          ISERR=$(jqv '.is_error'); SUBTYPE=$(jqv '.subtype')
+          : "${IN:=0}" "${OUT:=0}" "${CR:=0}" "${CC:=0}" "${TURNS:=?}" "${MS:=0}"
+          : "${ISERR:=?}" "${SUBTYPE:=?}"
+          TOTAL=$(( IN + OUT + CR + CC ))
+          MINS=$(( MS / 60000 ))
+
+          {
+            echo "totals=$TOTAL"
+            echo "cost=${COST:-n/a}"
+            echo "mins=$MINS"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## Critic Radar — ${{ steps.prep.outputs.date }}"
+            echo
+            echo "| Metric | Value |"
+            echo "|---|---|"
+            echo "| Model | \`$CRITIC_MODEL\` (effort: \`$CRITIC_EFFORT\`) |"
+            echo "| Input tokens | $IN |"
+            echo "| Output tokens | $OUT |"
+            echo "| Cache read / write | $CR / $CC |"
+            echo "| **Total tokens** | **$TOTAL** |"
+            echo "| Cost equivalent | ${COST:-n/a} USD |"
+            echo "| Turns | $TURNS |"
+            echo "| Duration | ${MINS} min |"
+            echo "| Exit code | $CODE |"
+            echo "| is_error / subtype | $ISERR / $SUBTYPE |"
+            echo
+            echo "> Cost is the metered-API **equivalent** value of this run, reported by the CLI."
+            echo "> On subscription auth it is a usage gauge, not a bill. Subscription headroom is"
+            echo "> not visible from CI — check \`/usage\` in an interactive session."
+            echo
+            echo "<details><summary>Radar report</summary>"
+            echo
+            jq -r '.result // "No .result field in output."' radar-result.json 2>/dev/null \
+              || echo 'Could not parse radar-result.json.'
+            echo
+            echo "</details>"
+            if [ -s radar-stderr.txt ]; then
+              echo
+              echo "<details><summary>stderr</summary>"
+              echo
+              echo '```'
+              tail -50 radar-stderr.txt
+              echo '```'
+              echo "</details>"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          exit "$CODE"
+
+      # `if: always()` because a report that exists must be delivered even when the CLI exits
+      # non-zero — otherwise the edits die with the runner.
+      - name: Commit whatever the Radar produced
+        id: commit
+        if: always()
+        run: |
+          set -euo pipefail
+          # CI transcripts, never repo artifacts (also git-ignored, since the agent may
+          # run `git add -A` during its own turn, long before this cleanup).
+          rm -f radar-result.json radar-stderr.txt
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(critic): Radar sweep ${{ steps.prep.outputs.date }}"
+          fi
+
+          # Delivery test = "does this branch carry anything the base does not", NOT
+          # "did I just stage something". radar-prompt.md INSTRUCTS the agent to commit its
+          # own work; when it obeys, the staged-changes test is empty and the old logic
+          # skipped push+PR and reported "found nothing to record" — losing a finished
+          # report precisely on the compliant path. Verified: run #3, 22 min, 4.7M tokens.
+          BASE="origin/${{ github.event.repository.default_branch }}"
+          AHEAD=$(git rev-list --count "$BASE..HEAD" 2>/dev/null || echo 0)
+          echo "ahead=$AHEAD" >> "$GITHUB_OUTPUT"
+          if [ "$AHEAD" -gt 0 ]; then
+            echo "deliver=true" >> "$GITHUB_OUTPUT"
+            echo "Radar produced $AHEAD commit(s) — delivering." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "deliver=false" >> "$GITHUB_OUTPUT"
+            echo "**No commits ahead of $BASE** — the Radar recorded nothing." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Push and open PR
+        if: always() && steps.commit.outputs.deliver == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          git push -u origin "${{ steps.prep.outputs.branch }}"
+          # Body via heredoc, not an inline string: YAML-indented continuation lines would carry
+          # leading spaces into the PR, and Markdown renders a 4+ space indent as a code block.
+          gh pr create \
+            --title "Critic Radar — ${{ steps.prep.outputs.date }}" \
+            --base "${{ github.event.repository.default_branch }}" \
+            --head "${{ steps.prep.outputs.branch }}" \
+            --body-file - <<'PRBODY'
+          Automated Mode-A discovery sweep (zero prior context).
+
+          **Trigger:** ${{ github.event_name }} — ${{ github.event.inputs.reason || 'scheduled' }}
+          **Model:** `${{ env.CRITIC_MODEL }}` (effort `${{ env.CRITIC_EFFORT }}`)
+          **Usage:** ${{ steps.radar.outputs.totals }} tokens · ${{ steps.radar.outputs.cost }} USD equivalent · ${{ steps.radar.outputs.mins }} min
+
+          The executive summary is at the end of the report appended to
+          `docs/04-quality/critic/COVERAGE.md` §E. Full telemetry is in the run summary.
+
+          **Triage (≤15 min — SOP §3):** queue it → `ROADMAP.md` · reject it → `REFUTED-LEDGER.md`
+          §Rejected findings **with a reason** · escalate it → `/critic <target>`.
+
+          Merge the coverage-map update even if you reject every finding — those row updates are the
+          Radar's memory, and dropping them makes next week's run amnesiac.
+          PRBODY
+
+      # Alerting without any external service: a failed run files an issue you cannot miss.
+      # GitHub's own failure email goes only to whoever last touched the cron, and is easy to filter.
+      # `cancelled()` matters as much as `failure()`: timeout-minutes CANCELS rather than fails,
+      # so the costliest outcome — a full-length run at max effort that never finished — would
+      # otherwise produce no report, no PR and no alert at all.
+      - name: Open an issue if the run failed
+        if: failure() || cancelled()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          EXISTING=$(gh issue list --label critic-radar --state open --limit 1 --json number -q '.[0].number' || echo '')
+          if [ -n "$EXISTING" ]; then
+            gh issue comment "$EXISTING" --body "Another Critic Radar run failed: $RUN_URL"
+          else
+            gh label create critic-radar --color B60205 --description "Critic Radar automation" 2>/dev/null || true
+            gh issue create \
+              --title "Critic Radar failed — ${{ steps.prep.outputs.date }}" \
+              --label critic-radar \
+              --body "The scheduled Critic Radar run failed.
+
+          **Run:** $RUN_URL
+
+          A silently-failing scheduled critic is the exact failure mode this kit exists to prevent
+          (ledger law L-ONDEMAND). Do not close this without either fixing the run or recording why
+          in \`docs/04-quality/critic/REFUTED-LEDGER.md\`.
+
+          Common causes, in order: expired \`CLAUDE_CODE_OAUTH_TOKEN\`; subscription limit reached;
+          the 60-day inactivity auto-disable; a \`BINDING ERROR\` abort from \`radar-prompt.md\`."
+          fi
+
+      # The report must never be lost just because git failed — Critic-Radar.md §Delivery.
+      - name: Fallback — surface the report if the push failed
+        if: failure() || cancelled()
+        run: |
+          {
+            echo "### Critic Radar run failed"
+            echo
+            echo "Any report produced is in the *Run the Critic Radar* step summary above."
+            echo "Fallback rule (\`.Critic/Critic-Radar.md\` §Delivery): if push fails, the full"
+            echo "report is printed rather than lost."
+          } >> "$GITHUB_STEP_SUMMARY"

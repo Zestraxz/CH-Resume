@@ -1,0 +1,84 @@
+# OpenTelemetry Collector config
+# Run: docker run --rm -v $(pwd)/04_tools/infra/otel:/etc/otel otel/opentelemetry-collector-contrib:latest --config /etc/otel/otel-collector-config.yaml
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  # Limit memory before batching to avoid OOM
+  memory_limiter:
+    check_interval: 1s
+    limit_percentage: 75
+    spike_limit_percentage: 25
+
+  # Batch for export efficiency
+  batch:
+    send_batch_size: 1024
+    timeout: 10s
+
+  # PII / secret redaction in span/log attributes
+  redaction:
+    allow_all_keys: false
+    allowed_keys:
+      - http.method
+      - http.status_code
+      - http.route
+      - http.target
+      - service.name
+      - service.version
+      - deployment.environment
+      - trace_id
+      - span_id
+      - level
+    blocked_values:
+      - "(?i)password"
+      - "(?i)token"
+      - "(?i)secret"
+      - "(?i)authorization"
+      - "[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}"  # emails
+      - "[0-9]{3}-[0-9]{2}-[0-9]{4}"                         # US SSN
+      - "[0-9]{16}"                                          # cc-shaped
+
+  # Resource attributes - add deployment env / service metadata
+  resource:
+    attributes:
+      - key: deployment.environment
+        value: ${env:DEPLOYMENT_ENV}
+        action: upsert
+
+exporters:
+  # Choose ONE primary exporter based on your stack:
+  otlp/honeycomb:
+    endpoint: api.honeycomb.io:443
+    headers:
+      x-honeycomb-team: ${env:HONEYCOMB_API_KEY}
+
+  # Or:
+  otlphttp/grafana:
+    endpoint: ${env:GRAFANA_OTLP_ENDPOINT}
+    headers:
+      Authorization: "Basic ${env:GRAFANA_OTLP_AUTH}"
+
+  # Debug-tier console exporter (for dev only)
+  debug:
+    verbosity: detailed
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, batch, redaction, resource]
+      exporters: [debug]
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, batch, resource]
+      exporters: [debug]
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, batch, redaction, resource]
+      exporters: [debug]

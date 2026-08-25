@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json.schemastore.org/mcp-servers.json",
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem@2026.7.10", "YOUR_ALLOWED_DIRECTORY_HERE"]
+    },
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "_note": "Official remote GitHub MCP server - OAuth via /mcp in an interactive claude session. No PAT stored anywhere. Replaces the deprecated @modelcontextprotocol/server-github package."
+    },
+    "postgres": {
+      "command": "docker",
+      "args": [
+        "run", "-i", "--rm",
+        "--env-file", "PATH_TO_YOUR_GITIGNORED_.env",
+        "crystaldba/postgres-mcp:0.3.0",
+        "--access-mode=restricted"
+      ],
+      "_note": ".env holds DATABASE_URI=... (UTF-8, NO BOM - docker --env-file cannot parse a BOM). Use a read-only DB role + restricted mode = two-layer write block. Replaces the archived @modelcontextprotocol/server-postgres (unpatched SQL injection)."
+    }
+  }
+}

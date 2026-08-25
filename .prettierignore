@@ -1,0 +1,51 @@
+# Paths Prettier should not touch.
+# Auto-generated, vendored, or content-managed by other tools.
+
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+build/
+.next/
+.nuxt/
+out/
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Cache
+.cache/
+.turbo/
+.parcel-cache/
+
+# Lockfiles - Prettier corrupts these
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+bun.lockb
+poetry.lock
+uv.lock
+
+# Lifecycle folders Prettier doesn't need to touch
+05_archive/
+03_history/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Generated docs
+site/                  # MkDocs output
+docs-build/
+storybook-static/
+
+# Logs / temp
+*.log
+*.tmp
+*.bak
+*.bak.*

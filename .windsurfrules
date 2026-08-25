@@ -1,0 +1,7 @@
+# Windsurf Rules
+
+This file is a thin pointer. The canonical AI-assistant brief is in [`AGENTS.md`](AGENTS.md).
+
+Per the 2026 [AGENTS.md spec](https://agents.md/), AGENTS.md is read natively by Windsurf, Claude Code, Codex CLI, Cursor, Copilot, and others.
+
+Read [`AGENTS.md`](AGENTS.md). Everything is there.

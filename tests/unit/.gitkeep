@@ -1,0 +1,2 @@
+# Unit tests — no I/O, fast (< 100ms each).
+# Mirror source paths: src/lib/foo.ts → tests/unit/lib/foo.test.ts

@@ -1,0 +1,2 @@
+# Integration tests — real DB / cache / queue. Slower (< 5s each).
+# Use testcontainers (TS) or pytest fixtures (Py) to spin up real services.

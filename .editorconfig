@@ -1,0 +1,39 @@
+# EditorConfig: https://editorconfig.org
+# Cross-editor formatting baseline (backup to Prettier / ruff)
+
+root = true
+
+[*]
+indent_style = space
+indent_size = 2
+end_of_line = lf
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
+max_line_length = 100
+
+[*.{py,pyi}]
+indent_size = 4
+max_line_length = 100
+
+[*.{md,markdown}]
+trim_trailing_whitespace = false
+max_line_length = off
+
+[*.{yml,yaml}]
+indent_size = 2
+
+[Makefile]
+indent_style = tab
+
+[*.{ps1,psm1,psd1}]
+end_of_line = crlf
+indent_size = 4
+
+[*.{cmd,bat}]
+end_of_line = crlf
+indent_size = 2
+
+[*.{sh,bash}]
+end_of_line = lf
+indent_size = 2

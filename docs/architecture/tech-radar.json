@@ -1,0 +1,33 @@
+{
+  "title": "Resume Tech Radar",
+  "date": "2026",
+  "quadrants": [
+    { "name": "Languages & Frameworks" },
+    { "name": "Tools" },
+    { "name": "Platforms" },
+    { "name": "Techniques" }
+  ],
+  "rings": [
+    { "name": "Adopt",  "color": "#5ba300" },
+    { "name": "Trial",  "color": "#009eb0" },
+    { "name": "Assess", "color": "#c7ba00" },
+    { "name": "Hold",   "color": "#e09b96" }
+  ],
+  "entries": [
+    { "quadrant": 0, "ring": 0, "name": "TypeScript (strict)", "description": "Strict mode on everywhere." },
+    { "quadrant": 0, "ring": 0, "name": "Zod / Pydantic", "description": "Boundary validation." },
+    { "quadrant": 1, "ring": 0, "name": "pnpm",        "description": "Package manager (monorepo)." },
+    { "quadrant": 1, "ring": 0, "name": "Vitest",      "description": "Test runner." },
+    { "quadrant": 1, "ring": 0, "name": "Prisma",      "description": "ORM." },
+    { "quadrant": 1, "ring": 1, "name": "Renovate",    "description": "Dependency updates (vs Dependabot)." },
+    { "quadrant": 1, "ring": 1, "name": "changesets",  "description": "Monorepo release automation." },
+    { "quadrant": 2, "ring": 0, "name": "Docker Compose", "description": "Dev orchestration." },
+    { "quadrant": 2, "ring": 1, "name": "ghcr.io",     "description": "Container registry." },
+    { "quadrant": 3, "ring": 0, "name": "Trunk-based dev", "description": "Single main; PRs only." },
+    { "quadrant": 3, "ring": 0, "name": "Conventional Commits", "description": "Enforced via commitlint." },
+    { "quadrant": 3, "ring": 0, "name": "ADRs",        "description": "Decisions captured as files." },
+    { "quadrant": 3, "ring": 1, "name": "OpenTelemetry", "description": "Vendor-neutral telemetry." },
+    { "quadrant": 3, "ring": 2, "name": "SLSA L3",     "description": "Build provenance attestations." },
+    { "quadrant": 3, "ring": 3, "name": "GitFlow",     "description": "Use trunk-based instead." }
+  ]
+}

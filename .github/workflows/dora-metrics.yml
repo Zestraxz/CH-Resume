@@ -1,0 +1,39 @@
+name: DORA Metrics
+
+on:
+  deployment_status:
+  workflow_run:
+    workflows: ["Deploy", "CI"]
+    types: [completed]
+
+permissions:
+  contents: read
+  deployments: read
+
+jobs:
+  emit:
+    name: Emit deploy event
+    runs-on: ubuntu-latest
+    if: github.event.deployment_status.state == 'success' || github.event.workflow_run.conclusion == 'success'
+    steps:
+      - name: Emit to DORA backend
+        env:
+          DORA_BACKEND_URL: ${{ vars.DORA_BACKEND_URL }}
+          DORA_TOKEN: ${{ secrets.DORA_TOKEN }}
+        if: env.DORA_BACKEND_URL != ''
+        run: |
+          curl -X POST "$DORA_BACKEND_URL/events" \
+            -H "Authorization: Bearer $DORA_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "service": "${{ github.repository }}",
+              "event_type": "deploy",
+              "environment": "${{ github.event.deployment.environment || 'production' }}",
+              "status": "success",
+              "sha": "${{ github.sha }}",
+              "actor": "${{ github.actor }}",
+              "timestamp": "${{ github.event.created_at }}"
+            }' || echo "DORA emit failed (non-fatal)"
+      - name: Skip if backend not configured
+        if: env.DORA_BACKEND_URL == ''
+        run: echo "DORA_BACKEND_URL not set; skipping. Set as repo variable to enable."

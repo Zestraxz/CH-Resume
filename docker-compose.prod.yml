@@ -1,0 +1,90 @@
+# =============================================================================
+# Resume — Prod compose (overlay)
+# =============================================================================
+# Full orchestration: api, worker, web on top of dev's postgres + redis.
+# All config sourced from .env. No live mounts. Healthchecks strict.
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml down
+# =============================================================================
+
+services:
+  postgres:
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports: !reset []  # no public DB port in prod
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./04_tools/infra/postgres/init-readonly-role.sql:/docker-entrypoint-initdb.d/01-readonly.sql:ro
+    healthcheck:
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    restart: always
+
+  redis:
+    ports: !reset []
+    restart: always
+    healthcheck:
+      interval: 10s
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: production
+    container_name: resume-api
+    restart: always
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis:    { condition: service_healthy }
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+    ports:
+      - '${API_PORT:-8000}:8000'
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8000/health']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  worker:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: production
+    container_name: resume-worker
+    restart: always
+    command: ['node', 'dist/worker.js']
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis:    { condition: service_healthy }
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      target: production
+    container_name: resume-web
+    restart: always
+    depends_on:
+      api: { condition: service_healthy }
+    ports:
+      - '${WEB_PORT:-3000}:80'
+
+volumes:
+  postgres_data:
+  redis_data:
+  evidence_data:
+    name: resume_evidence_data

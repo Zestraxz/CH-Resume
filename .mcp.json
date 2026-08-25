@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json.schemastore.org/mcp-servers.json",
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem@2026.7.10", "YOUR_ALLOWED_DIRECTORY_HERE"],
+      "_note": "Claude Code does NOT expand ${workspaceFolder} (that is a VS Code/Cursor variable) - use a literal absolute path, or delete this project-scope entry to inherit the user-scope filesystem server (project scope shadows user scope on name clash)."
+    },
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "_note": "Official remote GitHub MCP server. Authenticate once via /mcp in an interactive claude session (OAuth). No PAT stored anywhere. Replaces the deprecated @modelcontextprotocol/server-github package."
+    }
+  }
+}

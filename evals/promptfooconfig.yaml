@@ -1,0 +1,41 @@
+# promptfoo eval config - https://promptfoo.dev
+# Run: npx promptfoo eval -c evals/promptfooconfig.yaml
+
+description: "Resume prompt evals"
+
+prompts:
+  - file://prompts/system.txt
+  - file://prompts/extraction.txt
+
+providers:
+  - id: anthropic:claude-sonnet-4.6
+    config:
+      apiKey: "${ANTHROPIC_API_KEY}"
+      max_tokens: 4096
+
+tests:
+  - description: "extracts intent from simple query"
+    vars:
+      query: "Create a new user named Alice"
+    assert:
+      - type: contains-json
+      - type: javascript
+        value: "JSON.parse(output).intent === 'create'"
+      - type: javascript
+        value: "JSON.parse(output).confidence > 0.8"
+
+  - description: "rejects empty input"
+    vars:
+      query: ""
+    assert:
+      - type: contains
+        value: "error"
+
+defaultTest:
+  options:
+    cache: true
+  assert:
+    - type: latency
+      threshold: 5000
+    - type: cost
+      threshold: 0.01
