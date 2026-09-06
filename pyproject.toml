@@ -34,7 +34,7 @@ dev = [
     "mypy>=1.10",
     "ipython>=8.20",
 ]
-web = ["streamlit>=1.32"]
+web = ["streamlit>=1.63.0"]
 deep = ["playwright>=1.42"]
 
 [project.scripts]
