@@ -85,7 +85,7 @@ jobs:
           image: ghcr.io/${{ github.repository }}/api@${{ steps.push.outputs.digest }}
 
       - name: Attest SBOMs
-        uses: actions/attest-sbom@v2
+        uses: actions/attest-sbom@v4
         with:
           subject-name: ghcr.io/${{ github.repository }}/api
           subject-digest: ${{ steps.push.outputs.digest }}
