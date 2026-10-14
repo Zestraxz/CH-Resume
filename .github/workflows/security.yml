@@ -1,3 +1,12 @@
+# Secret scan.
+#
+# Replaced 2026-10-15 (PC2). The scaffold's version could not parse (job-level `hashFiles()`), and its
+# other jobs did not fit: CodeQL and dependency review need GitHub Advanced Security on a private
+# repo, and npm/pip audit had only the scaffold's placeholder manifests to audit.
+#
+# Scope: push and pull_request scan ONLY the new commits (gitleaks-action's own behaviour). A manual
+# run (workflow_dispatch) scans the FULL history - use it as an on-demand audit.
+
 name: Security
 
 on:
@@ -5,88 +14,26 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
-  schedule:
-    # Sunday 02:00 UTC
-    - cron: '0 2 * * 0'
+  workflow_dispatch:
 
 permissions:
   contents: read
-  security-events: write
-  actions: read
+  pull-requests: read # gitleaks lists a PR's commits through the API
 
 concurrency:
-  group: security-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  codeql:
-    name: CodeQL (${{ matrix.language }})
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        language: [javascript-typescript, python]
-    steps:
-      - uses: actions/checkout@v4
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
-        with:
-          languages: ${{ matrix.language }}
-          queries: security-and-quality
-      - name: Autobuild
-        uses: github/codeql-action/autobuild@v3
-      - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
-        with:
-          category: '/language:${{ matrix.language }}'
-
-  dependency-review:
-    name: Dependency review
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/dependency-review-action@v4
-        with:
-          fail-on-severity: high
-          comment-summary-in-pr: true
-
   secret-scan:
     name: Secret scan (gitleaks)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v2
+      - uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  npm-audit:
-    name: npm audit
-    runs-on: ubuntu-latest
-    if: hashFiles('package.json') != ''
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v3
-        with:
-          version: 9
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: '.nvmrc'
-          cache: 'pnpm'
-      - run: pnpm install --frozen-lockfile
-      - name: pnpm audit (high+)
-        run: pnpm audit --audit-level=high
-
-  pip-audit:
-    name: pip-audit
-    runs-on: ubuntu-latest
-    if: hashFiles('pyproject.toml') != ''
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - run: pip install pip-audit
-      - run: pip-audit --desc --strict
+          GITLEAKS_ENABLE_COMMENTS: false # read-only token; findings go to the job summary

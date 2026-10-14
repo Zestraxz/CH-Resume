@@ -29,7 +29,7 @@ _None._
 
 ## Notes
 
-- Choice to default to pnpm workspaces over npm/yarn — see [../docs/04-quality/adr/0002-package-manager.md](../docs/04-quality/adr/0002-package-manager.md).
+- Choice to default to pnpm workspaces over npm/yarn — see `docs/04-quality/adr/0002-package-manager.md` (scaffold template ADR; never created in this repo).
 - Choice to keep `src/` AND `apps/` directories in template (delete one when you instantiate) — gives flexibility without forcing a monorepo decision upfront.
 
 ## Phase 1 → Phase 2 handoff

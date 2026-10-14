@@ -57,7 +57,7 @@ Added `CASCADE` to the migration. Switched integration test DB to a real Postgre
 
 **See also:**
 - ADR-0007
-- [../docs/04-quality/adr/0007-postgres-integration-tests.md](../docs/04-quality/adr/0007-postgres-integration-tests.md)
+- `docs/04-quality/adr/0007-postgres-integration-tests.md` (scaffold template ADR; never created in this repo)
 
 ---
 

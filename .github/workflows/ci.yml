@@ -1,3 +1,17 @@
+# CI for this repo: Markdown docs plus the PowerShell tools the scaffold ships.
+#
+# Replaced 2026-10-15 (PC2). The scaffold's CI (pnpm lint/typecheck/test, ruff + mypy + pytest,
+# docker compose) never ran once here: it put `hashFiles()` in a job-level `if:`, where GitHub does
+# not allow it, so every push recorded a 0-job "workflow file issue" failure named by the file path.
+# Its Node/Python jobs had nothing real to act on either - the scaffold's placeholder package.json
+# has no lockfile, and src/ holds only the template's sample code. Each job below checks files this
+# repo owns:
+#   workflow-lint - actionlint over .github/workflows (pinned version + checksum).
+#   powershell    - every tracked .ps1/.psm1/.psd1 parses under Windows PowerShell 5.1, the runtime
+#                   the scripts target (non-ASCII in a BOM-less file breaks 5.1 silently).
+#   links         - every repo-relative Markdown link resolves (offline; no network flakiness).
+# Rule for edits: never put hashFiles(), secrets or env in a job-level `if:` - they are step-only.
+
 name: CI
 
 on:
@@ -5,80 +19,60 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  node:
-    name: Node (lint + typecheck + test)
+  workflow-lint:
+    name: Workflow lint (actionlint)
     runs-on: ubuntu-latest
-    if: hashFiles('package.json') != ''
+    timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v3
-        with:
-          version: 9
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: '.nvmrc'
-          cache: 'pnpm'
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm format:check
-      - run: pnpm lint
-      - run: pnpm typecheck
-      - run: pnpm test
-      - name: Upload coverage
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: node-coverage
-          path: coverage/
-          if-no-files-found: ignore
-
-  python:
-    name: Python (ruff + mypy + pytest)
-    runs-on: ubuntu-latest
-    if: hashFiles('pyproject.toml') != ''
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-          cache: 'pip'
-      - run: pip install -e ".[dev]"
-      - run: ruff check .
-      - run: ruff format --check .
-      - run: mypy src
-      - run: pytest --cov=src --cov-report=xml --cov-report=term
-      - name: Upload coverage
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: python-coverage
-          path: coverage.xml
-          if-no-files-found: ignore
-
-  docker:
-    name: Docker build
-    runs-on: ubuntu-latest
-    if: hashFiles('docker-compose.yml') != ''
-    steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
-      - name: Validate compose files
+      - uses: actions/checkout@v7
+      - name: Install actionlint 1.7.12
         run: |
-          docker compose config -q
-          [ -f docker-compose.prod.yml ] && docker compose -f docker-compose.yml -f docker-compose.prod.yml config -q || true
+          tarball=actionlint_1.7.12_linux_amd64.tar.gz
+          curl -sSfLO "https://github.com/rhysd/actionlint/releases/download/v1.7.12/$tarball"
+          echo "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  $tarball" | sha256sum -c -
+          tar -xzf "$tarball" actionlint
+      # Workflow semantics only; self-critic.yml is synced from the Critic kit, so script style
+      # findings in it cannot be fixed here without drifting from the kit.
+      - run: ./actionlint -color -shellcheck= -pyflakes=
 
-  docs:
-    name: Docs (link check + markdownlint)
-    runs-on: ubuntu-latest
+  powershell:
+    name: PowerShell parse (Windows PowerShell 5.1)
+    runs-on: windows-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - name: markdownlint
-        uses: DavidAnson/markdownlint-cli2-action@v16
+      - uses: actions/checkout@v7
+      - name: Parse every tracked PowerShell file
+        shell: powershell
+        run: |
+          $bad = 0
+          $files = @(git -c core.quotePath=false ls-files '*.ps1' '*.psm1' '*.psd1')
+          foreach ($f in $files) {
+            $tok = $null; $err = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path -LiteralPath $f).Path, [ref]$tok, [ref]$err)
+            foreach ($e in $err) { $bad++; Write-Host ("::error file={0},line={1}::{2}" -f $f, $e.Extent.StartLineNumber, $e.Message) }
+          }
+          Write-Host ("parsed {0} files, {1} parse error(s)" -f $files.Count, $bad)
+          if ($bad) { exit 1 }
+
+  links:
+    name: Markdown links (repo-relative, offline)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: lycheeverse/lychee-action@v2
         with:
-          globs: '**/*.md'
-        continue-on-error: true
+          args: >-
+            --offline --no-progress
+            './**/*.md'
+          fail: true
