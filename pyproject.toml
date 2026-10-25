@@ -35,7 +35,7 @@ dev = [
     "ipython>=8.20",
 ]
 web = ["streamlit>=1.32"]
-deep = ["playwright>=1.42"]
+deep = ["playwright>=1.62.0"]
 
 [project.scripts]
 resume = "resume.__main__:main"
